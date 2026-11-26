@@ -553,13 +553,12 @@ def gen_mfma(ctx: ExecuteContext) -> str:
         if arch == 'cdna2' and input_type == 'F32':
             flags += ' | ((wf.fp_denorm_mode_f32() & 1u) ? 0 : RJ_ARITH_FP_FLUSH_INPUT_DENORMALS)'
             flags += ' | ((wf.fp_denorm_mode_f32() & 2u) ? 0 : RJ_ARITH_FP_FLUSH_OUTPUT_DENORMALS)'
-        # CDNA4 §7.1.2 specifies finite F32 overflow saturation. MI300's table
-        # also lists it, but gfx942 retains its existing floating-point behavior
-        # pending a physical mode-toggle measurement on that target.
-        # gfx942 also forwards the bit to enforce exact-model qualification;
-        # its approximate paths continue to ignore it.
+        # CDNA4 §7.1.2 specifies FP32 overflow saturation on MFMA/SMFMAC; MI350X
+        # captures verify per-pass saturation on F16, BF16 and OCP FP8/BF8 (while
+        # approximate F16 and FP8 paths continue to ignore the bit). gfx942 also
+        # forwards the bit to enforce exact-model qualification.
         if (arch == 'cdna3' and input_type != 'F32') or (
-            arch == 'cdna4' and input_type in ('F32', 'BF16')
+            arch == 'cdna4' and input_type != 'XF32'
         ):
             flags += ' | (wf.fp16_ovfl() ? RJ_ARITH_FP16_OVFL : 0)'
         L.append(f'      wf, {api}, {flags}, controls,')
